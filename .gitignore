@@ -2,3 +2,4 @@ bin
 include
 lib
 ps5_frames
+.venv
