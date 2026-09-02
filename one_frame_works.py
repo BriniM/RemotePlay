@@ -22,6 +22,9 @@ from pyremoteplay import RPDevice
 # QueueReceiver receives and stores video frames coming from Remote Play.
 from pyremoteplay.receiver import QueueReceiver
 
+# Import the OCR helper that reads the match timer from a frame image.
+from fit_image_to_video_frame import extract_match_timer
+
 
 # IP address of the PS5 on the local network.
 POSTE_3 = "192.168.0.166"
@@ -69,6 +72,14 @@ def get_latest_frame(receiver):
 
     # Return None when no frame is currently available.
     return None
+
+
+# Define a small wrapper that reads the match timer from a video frame.
+def read_match_timer(frame):
+
+    # Convert the current Remote Play frame into a Pillow image and
+    # reuse the OCR helper from fit_image_to_video_frame.py.
+    return extract_match_timer(frame.to_image())
 
 
 # Define the main function containing the Remote Play program.
@@ -282,6 +293,10 @@ def main():
     # Tell the user that video has started arriving.
     print("\nFirst frame received!")
 
+    # Read and display the current match timer from the live frame.
+    timer_text = read_match_timer(frame)
+    print(f"Match timer: '{timer_text}'")
+
     # Print the width of the received video frame.
     print(f"Width:  {frame.width}")
 
@@ -357,6 +372,9 @@ def main():
                     # into a PIL/Pillow image.
                     image = frame.to_image()
 
+                    # Read the match timer from the same frame image.
+                    timer_text = extract_match_timer(image)
+
                     # Save the image as a PNG file.
                     image.save(output_file)
 
@@ -364,7 +382,7 @@ def main():
                     # the screenshot was saved.
                     print(
                         f"[{datetime.now().strftime('%H:%M:%S')}] "
-                        f"Saved: {output_file}"
+                        f"Saved: {output_file} | Timer: '{timer_text}'"
                     )
 
                 # Catch errors that occur during image conversion

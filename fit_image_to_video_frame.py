@@ -27,17 +27,13 @@ TIMER_CROP = (55, 66, 104, 98)
 OCR = RapidOCR()
 
 
-# Define a helper function that takes an image path and returns
-# a preprocessed Pillow image containing only the timer.
-def _preprocess_timer_crop(image_path: Path) -> Image.Image:
+# Define the exact timer crop once so both file-based and image-based
+# OCR paths use the same coordinates.
+def _preprocess_timer_crop_from_image(image: Image.Image) -> Image.Image:
 
-    # Open the source image.
-    # The "with" statement automatically closes the image afterwards.
-    with Image.open(image_path) as source:
-
-        # Crop only the timer area using the coordinates defined above.
-        # Then convert the cropped image to grayscale ("L" mode).
-        crop = source.crop(TIMER_CROP).convert("L")
+    # Crop only the timer area using the coordinates defined above.
+    # Then convert the cropped image to grayscale ("L" mode).
+    crop = image.crop(TIMER_CROP).convert("L")
 
     # Convert the grayscale image into a black-and-white image.
     #
@@ -49,15 +45,33 @@ def _preprocess_timer_crop(image_path: Path) -> Image.Image:
     return crop.point(lambda value: 255 if value > 150 else 0)
 
 
+# Define a helper function that takes an image path and returns
+# a preprocessed Pillow image containing only the timer.
+def _preprocess_timer_crop(image_path: Path) -> Image.Image:
+
+    # Open the source image.
+    # The "with" statement automatically closes the image afterwards.
+    with Image.open(image_path) as source:
+        return _preprocess_timer_crop_from_image(source)
+
+
 # Define the function responsible for extracting the timer text.
 #
-# If no image_path is provided, it uses IMAGE_PATH defined above.
-def extract_match_timer(image_path=IMAGE_PATH):
+# If no image_source is provided, it uses IMAGE_PATH defined above.
+def extract_match_timer(image_source=IMAGE_PATH):
 
-    # Convert the supplied path into a Path object and preprocess
-    # the image by cropping it, converting it to grayscale,
-    # and applying the black/white threshold.
-    image = _preprocess_timer_crop(Path(image_path))
+    # Accept either a file path or an in-memory Pillow image.
+    if isinstance(image_source, Image.Image):
+
+        # Reuse the same crop logic for video frames and screenshots.
+        image = _preprocess_timer_crop_from_image(image_source)
+
+    else:
+
+        # Convert the supplied path into a Path object and preprocess
+        # the image by cropping it, converting it to grayscale,
+        # and applying the black/white threshold.
+        image = _preprocess_timer_crop(Path(image_source))
 
     # Because we already know exactly where the timer is,
     # we can try to disable OCR's text detection stage.
